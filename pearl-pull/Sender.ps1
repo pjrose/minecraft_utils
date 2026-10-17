@@ -24,8 +24,16 @@ if ($Once) {
     if ($status -ne 'clicked' -and $status -ne 'dry-run') { exit 1 }
     exit 0
 }
-$status = [PearlPull.Transport]::Send($config.Address, [int]$config.Port, $config.PairingCode, 'ping')
-Write-Host "Network check: $status (this does not click or check the game)."
+$connection = Test-ReceiverConnection $config
+if ($connection.Ready) {
+    Write-Host "Network check: ready (this does not click or check the game)."
+}
+elseif ($Test) {
+    throw $connection.Message
+}
+else {
+    Write-Warning "PC 2 did not answer the startup check. The hotkey will stay active; each press tries PC 2 again. $($connection.Message)"
+}
 if (-not $Test) {
     [PearlPull.DesktopInput]::RunHotkey($config.Address, [int]$config.Port, $config.PairingCode, $FunctionKey)
 }

@@ -156,6 +156,33 @@ class PearlPullTests(unittest.TestCase):
             self.assertEqual(len(received), 2)
             self.assertEqual(received[0], received[1], "A retry must reuse the exact request to prevent a second click")
 
+    def test_offline_probe_returns_failure_but_explicit_test_exits_nonzero(self):
+        with tempfile.TemporaryDirectory() as directory, socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as silent_receiver:
+            # Bound but deliberately silent: exercise real retry/timeout behavior without an input helper.
+            silent_receiver.bind(("127.0.0.1", 0))
+            path = Path(directory) / "sender.json"
+            path.write_text(json.dumps({
+                "Address": "127.0.0.1", "Port": silent_receiver.getsockname()[1], "PairingCode": KEY
+            }))
+            environment = os.environ.copy()
+            environment["PEARL_PULL_TEST_ROOT"] = str(ROOT)
+            environment["PEARL_PULL_TEST_CONFIG"] = str(path)
+            result = subprocess.run([PWSH, "-NoLogo", "-NoProfile", "-Command", """
+                $ErrorActionPreference = 'Stop'
+                . (Join-Path $env:PEARL_PULL_TEST_ROOT 'Common.ps1')
+                $config = Read-Config $env:PEARL_PULL_TEST_CONFIG
+                $connection = Test-ReceiverConnection $config
+                if ($connection.Ready) { throw 'An offline receiver was marked ready.' }
+                if (-not $connection.Message.Contains('No reply from PC 2')) { throw 'Timeout diagnosis was lost.' }
+                Write-Output 'Offline probe returned normally; caller can continue.'
+            """], env=environment, capture_output=True, text=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("Offline probe returned normally", result.stdout)
+            result = self.run_ps("-File", ROOT / "Sender.ps1", "-ConfigPath", path, "-Test", check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn("Network check: ready", result.stdout)
+            self.assertIn("No reply from PC 2", result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

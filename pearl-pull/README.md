@@ -7,6 +7,10 @@ is required. A Stream Deck can send the same F8 key if you have one.
 **Stream Deck Neo:** follow the [Neo setup guide](STREAM-DECK-NEO.md) for the
 included button artwork and `Start-StreamDeck-Neo.cmd` launcher.
 
+**Smart App Control or automatic startup:** see
+[Windows security and sign-in startup](STARTUP-AND-WINDOWS-SECURITY.md).
+This unsigned script version can be blocked by Smart App Control.
+
 For a pearl stasis chamber, the second account must already be standing still
 with its crosshair aimed at the correct trapdoor, within reach. Minecraft must
 be in the foreground, with menus/chat closed. The pearl must belong to the
@@ -51,7 +55,13 @@ establish that the chamber works.
 
 - PC 2: open **Start-Receiver.cmd**, switch to Minecraft, and aim at the trapdoor.
 - PC 1: open **Start-Hotkey.cmd**, then play. Press F8 when needed.
-- Close the utility windows to stop. Re-arm the chamber after using the pearl.
+- For manually launched tools, close the utility windows to stop. Re-arm the
+  chamber after using the pearl.
+
+To run automatically at Windows sign-in, use the optional
+[startup task](STARTUP-AND-WINDOWS-SECURITY.md#start-automatically-when-the-player-signs-in)
+after pairing and verifying normal operation. The sender now stays active if
+PC 2 is offline during its initial network check.
 
 The pairing/address settings are saved separately for each Windows user in
 `%LOCALAPPDATA%\MinecraftUtils\pearl-pull-receiver.json` and
@@ -110,6 +120,7 @@ request using the saved settings. A resident sender with a hotkey is faster.
 | No reply | Check PC 2's receiver, IP, pairing code, Private firewall rule, and that both PCs have synchronized Windows clocks. Guest Wi-Fi may isolate devices. A lost reply does not prove the click failed: check the chamber before pressing again. |
 | Hotkey already registered | Close a duplicate sender or select another function key. |
 | Script execution blocked | Unblock the downloaded ZIP before extraction. Organization-managed execution policies may require your administrator; the utility does not override them. |
+| Smart App Control blocked the file | This unsigned version may require a trusted signed release or a change to your PC's Smart App Control setting; see the [security guide](STARTUP-AND-WINDOWS-SECURITY.md#smart-app-control). Startup does not bypass this protection. |
 
 The foreground check recognizes `Minecraft.Windows.exe` directly and inside
 the older Windows UWP frame host. It cannot distinguish gameplay from a menu

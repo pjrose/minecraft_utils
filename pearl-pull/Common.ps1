@@ -31,3 +31,14 @@ function Assert-Windows {
         throw 'Mouse input and global hotkeys require Windows. Only -DryRun, -Test, and -Once networking checks work on other systems.'
     }
 }
+
+function Test-ReceiverConnection($Config) {
+    try {
+        $status = [PearlPull.Transport]::Send($Config.Address, [int]$Config.Port, $Config.PairingCode, 'ping')
+        if ($status -ne 'ready') { throw "Unexpected receiver status: $status" }
+        return [pscustomobject]@{ Ready = $true; Message = $status }
+    }
+    catch {
+        return [pscustomobject]@{ Ready = $false; Message = $_.Exception.Message }
+    }
+}

@@ -51,6 +51,9 @@ Try this with an expendable pearl first. Confirm that the trapdoor operates
 and the intended player teleports. Keep the receiver window running and
 Minecraft focused on PC 2, and re-arm the chamber after use.
 
+Once that works, you can [install automatic startup at Windows sign-in](STARTUP-AND-WINDOWS-SECURITY.md#start-automatically-when-the-player-signs-in)
+on each PC so the daily launchers are no longer needed. The Neo still sends F8.
+
 The icon is a static button label. It does not indicate whether the chamber is
 armed, the receiver is connected, or the teleport succeeded. The sender window
 shows request results such as `clicked`, `unfocused`, or `cooldown`; see the
