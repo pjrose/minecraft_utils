@@ -4,6 +4,9 @@ Press **F8 on PC 1** to request one right-click on **PC 2**. This uses Windows'
 built-in PowerShell and your home network; no Python, paid app, or Stream Deck
 is required. A Stream Deck can send the same F8 key if you have one.
 
+**Stream Deck Neo:** follow the [Neo setup guide](STREAM-DECK-NEO.md) for the
+included button artwork and `Start-StreamDeck-Neo.cmd` launcher.
+
 For a pearl stasis chamber, the second account must already be standing still
 with its crosshair aimed at the correct trapdoor, within reach. Minecraft must
 be in the foreground, with menus/chat closed. The pearl must belong to the
@@ -24,8 +27,6 @@ danger, build/reset the chamber, or check whether the teleport succeeded.
    in **PowerShell as Administrator**:
 
    ```powershell
-
-
    if (-not (Get-NetFirewallRule -Name 'MinecraftUtils-PearlPull' -ErrorAction SilentlyContinue)) {
        New-NetFirewallRule -Name 'MinecraftUtils-PearlPull' -DisplayName 'Minecraft Pearl Pull' -Direction Inbound -Action Allow -Protocol UDP -LocalPort 48123 -Profile Private -RemoteAddress LocalSubnet
    }
@@ -70,8 +71,15 @@ files, and repeat setup.
 
 ## Stream Deck and other keys
 
-With the sender running on PC 1, configure a Stream Deck **System → Hotkey**
-action to send **F8**. This uses the existing connection and avoids launching a
+For the eight-key **Stream Deck Neo**, use the illustrated
+[Neo setup guide](STREAM-DECK-NEO.md). It includes a ready-to-use PNG icon and
+a launcher using the same F8 binding as the keyboard sender.
+
+Close the sender before recording a hotkey in the Stream Deck editor, so
+recording the key does not trigger a click. Then restart the sender to play.
+
+Configure a Stream Deck **System → Hotkey** action to send **F8**, then start
+the sender on PC 1. This uses the existing connection and avoids launching a
 new PowerShell process for each press. The Stream Deck must be connected to
 PC 1 for this setup.
 
