@@ -19,10 +19,17 @@ jobs:
         with:
           python-version: '3.12'
       - name: Network, protocol, settings, and log checks
-        run: python -m unittest discover -s pearl-pull/tests -v
+        run: python -m unittest discover -s tests -v
       - name: Install NSIS
         shell: pwsh
-        run: choco install nsis --version=3.11 -y --no-progress
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}/NSIS/makensis.exe"
+          if (-not (Test-Path $compiler)) {
+            choco install nsis --version=3.11 -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'NSIS installation failed' }
+          }
+          & $compiler /VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'NSIS compiler is unavailable' }
       - name: Compile both apps and installers
         shell: pwsh
         run: ./installer/build.ps1 -Makensis "${env:ProgramFiles(x86)}/NSIS/makensis.exe"
@@ -31,9 +38,28 @@ jobs:
         run: |
           foreach ($role in @('Button', 'Receiver')) {
             $app = Resolve-Path "artifacts/$role/PearlPull$role.exe"
-            $process = Start-Process $app -ArgumentList '--smoke-test' -PassThru
-            if (-not $process.WaitForExit(20000)) { $process.Kill(); throw "$role UI check timed out" }
-            if ($process.ExitCode -ne 0) { throw "$role UI check failed: $($process.ExitCode)" }
+            $info = [System.Diagnostics.ProcessStartInfo]::new($app.Path, '--smoke-test')
+            $info.UseShellExecute = $false
+            $process = [System.Diagnostics.Process]::Start($info)
+            try {
+              if (-not $process.WaitForExit(20000)) { $process.Kill(); throw "$role UI check timed out" }
+              if ($process.ExitCode -ne 0) { throw "$role UI check failed: $($process.ExitCode)" }
+            }
+            finally { $process.Dispose() }
+      - name: Collect failure diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts/diagnostics -Force | Out-Null
+          $logs = Join-Path $env:LOCALAPPDATA 'MinecraftUtils/logs'
+          if (Test-Path $logs) { Copy-Item "$logs/*" artifacts/diagnostics -Force }
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pearl-Pull-Failure-Logs
+          path: artifacts/diagnostics/
+          if-no-files-found: ignore
           }
       - name: Upload Windows installers
         uses: actions/upload-artifact@v4

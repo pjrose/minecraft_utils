@@ -12,9 +12,9 @@ Your child does not need PowerShell or a command line.
    Extract it. Run **PearlPull-Receiver-Setup.exe** on PC 2 and
    **PearlPull-Button-Setup.exe** on PC 1. Install while signed in as the Windows
    user who plays Minecraft. The installers use that user's profile.
-2. Close the old Pearl Pull script windows. The tray apps reuse saved pairing
-   files and replace this utility's old scheduled startup tasks when permitted.
-   Do not run both versions at once.
+2. If upgrading from an earlier script release, close its windows first. Saved
+   pairing is reused, and this utility's earlier scheduled startup tasks are
+   replaced when the account permits it.
 3. Open **Receiver** on PC 2. Click **Allow home network (parent)** and approve
    Windows' administrator prompt. Set the trusted home network to **Private**
    using **Open Windows network settings** if necessary. The rule allows only
@@ -34,11 +34,15 @@ The apps require .NET Framework 4.8, included with Windows 11 and recent
 Windows 10. Setup checks for it. No PowerShell execution policy or runtime C#
 compilation is involved in the installed apps.
 
-**These initial installers and executables are unsigned.** Smart App Control
+## Windows security
+
+**These installers and executables are unsigned.** Smart App Control
 may still block them. A trusted publisher certificate and a signed release
 are needed to address that deployment requirement; an installer alone cannot
-grant an exception. The [security guide](STARTUP-AND-WINDOWS-SECURITY.md) explains
-the distinction. No security settings are changed by installation.
+grant an exception. No security settings are changed by installation. Running
+as administrator
+or changing PowerShell execution policy does not grant an exception to Smart
+App Control. A self-signed certificate does not establish publisher trust.
 
 ## Your child's daily steps
 
@@ -97,25 +101,4 @@ removes its startup task/entry and shortcuts. Pairing settings, logs, and the
 shared Private-network firewall rule remain for reinstalls. You can turn off
 startup without uninstalling by clearing **Start with Windows** in the app.
 
-## Build and verification
-
-The source lives in `tray/`. Both roles compile the same tested network/input
-core in `PearlPull.cs`; the role is selected at build time. On a development
-machine with .NET SDK 8, PowerShell, and NSIS 3.11:
-
-```powershell
-./installer/build.ps1 -Makensis 'C:\Program Files (x86)\NSIS\makensis.exe'
-```
-
-Run that from the repository root. It produces two apps and two installers
-under `artifacts/`. On Linux, set `NSISDIR` if NSIS was extracted locally; the
-same build script accepts its `makensis` path. NuGet supplies Microsoft's
-.NET Framework reference assemblies for cross-compilation.
-
-The automated tests exercise the actual UDP/HTTP paths, duplicate suppression,
-authentication, timing, retry behavior, bounded/redacted logs, and migration of
-PowerShell-created settings. The Windows workflow additionally opens both
-forms, checks close-to-tray behavior, and quits them using `--smoke-test`, with
-no network listeners or mouse input. Linux cross-compilation does not validate
-Windows GUI, Task Scheduler, firewall elevation, or Minecraft input. Those
-require a Windows run and the parent setup check above.
+See [development](DEVELOPMENT.md) for source layout, tests, and installer builds.

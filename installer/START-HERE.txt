@@ -36,4 +36,4 @@ These initial installers and apps are unsigned. If Smart App Control blocks
 them, installation does not bypass it. A trusted signed release is required
 for that deployment. Do not turn off protections merely to test the installer.
 
-Full guide: https://github.com/pjrose/minecraft_utils/blob/main/pearl-pull/TRAY-APPS.md
+Full guide: https://github.com/pjrose/minecraft_utils/blob/main/docs/SETUP.md

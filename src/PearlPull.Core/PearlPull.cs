@@ -16,7 +16,7 @@ namespace PearlPull
 {
     public static class TraceLog
     {
-        public const string Build = "0.5.0";
+        public const string Build = "0.5.1";
         public static event Action<string, string, string> Entry;
         private static readonly object Gate = new object();
         private static readonly Regex Secret = new Regex("[0-9a-fA-F]{64}");
@@ -472,7 +472,7 @@ namespace PearlPull
                 if (!Matches(request[1], path))
                 {
                     // Never log URLs, paths, raw headers, or tokens.
-                    TraceLog.Write("WARN", "streamdeck.rejected", "reason=wrong_URL_or_token"); Reply(stream, 403, "Use the URL from Setup-StreamDeck.cmd"); return;
+                    TraceLog.Write("WARN", "streamdeck.rejected", "reason=wrong_URL_or_token"); Reply(stream, 403, "Copy the Neo button URL from Pearl Pull Button"); return;
                 }
                 if (!running || reading.ElapsedMilliseconds > 200)
                 {
@@ -557,28 +557,12 @@ namespace PearlPull
             public uint Type;
             public MouseInput Mouse;
         }
-        [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
-        [StructLayout(LayoutKind.Sequential)] private struct Message
-        {
-            public IntPtr Window;
-            public uint Id;
-            public UIntPtr WParam;
-            public IntPtr LParam;
-            public uint Time;
-            public Point Position;
-            public uint Private;
-        }
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
         private delegate bool EnumWindowCallback(IntPtr window, IntPtr parameter);
         [DllImport("user32.dll")] private static extern bool EnumChildWindows(IntPtr parent, EnumWindowCallback callback, IntPtr parameter);
         [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr window);
         [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
-        [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
-        [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr window, int id);
-        [DllImport("user32.dll", SetLastError = true)] private static extern int GetMessage(out Message message, IntPtr window, uint min, uint max);
-        [DllImport("user32.dll", SetLastError = true)] private static extern UIntPtr SetTimer(IntPtr window, UIntPtr id, uint interval, IntPtr callback);
-        [DllImport("user32.dll")] private static extern bool KillTimer(IntPtr window, UIntPtr id);
 
         private static string ProcessName(IntPtr window)
         {
@@ -633,69 +617,6 @@ namespace PearlPull
                     throw new Win32Exception(error, "Windows did not accept the mouse release.");
                 }
                 TraceLog.Write("TRACE", "input.injected", "right_down_accepted=true right_up_accepted=true");
-            }
-        }
-        public static void RunHotkey(string address, int port, string pairingCode, int functionKey)
-        {
-            RunHotkey(address, port, pairingCode, functionKey, false);
-        }
-        public static void RunHotkey(string address, int port, string pairingCode, int functionKey, bool testOnly)
-        {
-            if (functionKey < 1 || functionKey > 24) throw new ArgumentOutOfRangeException("functionKey");
-            const int id = 1;
-            // MOD_NOREPEAT: holding the key generates one request until released.
-            uint virtualKey = (uint)(0x70 + functionKey - 1);
-            TraceLog.Write("INFO", "hotkey.registering", "key=F" + functionKey + " virtual_key=" + virtualKey + " test_only=" + testOnly);
-            if (!RegisterHotKey(IntPtr.Zero, id, 0x4000, virtualKey))
-            {
-                Win32Exception error = new Win32Exception(Marshal.GetLastWin32Error(), "Windows could not register the hotkey. Close another sender/hotkey tester or try another function key.");
-                TraceLog.Failure("hotkey.registration_failed", error, "key=F" + functionKey);
-                throw error;
-            }
-            TraceLog.Write("INFO", "hotkey.registered", "key=F" + functionKey + " modifiers=none no_repeat=true listener_pc=PC1");
-            UIntPtr timer = SetTimer(IntPtr.Zero, UIntPtr.Zero, 30000, IntPtr.Zero);
-            if (timer == UIntPtr.Zero) TraceLog.Write("WARN", "hotkey.heartbeat_unavailable", "win32_error=" + Marshal.GetLastWin32Error());
-            long detected = 0;
-            try
-            {
-                Console.WriteLine(testOnly ? "HOTKEY TEST: press F{0} on the keyboard, then the Neo. No network requests or clicks will be made." : "Press F{0} to request one right-click on PC 2. Close this window to stop.", functionKey);
-                TraceLog.Write("INFO", "hotkey.waiting", "key=F" + functionKey + " detected=0 test_only=" + testOnly);
-                Message message;
-                int result;
-                while ((result = GetMessage(out message, IntPtr.Zero, 0, 0)) > 0)
-                {
-                    if (message.Id == 0x0113 && timer != UIntPtr.Zero && message.WParam == timer)
-                    {
-                        TraceLog.Write("INFO", "hotkey.waiting", "key=F" + functionKey + " detected=" + detected + " test_only=" + testOnly);
-                        continue;
-                    }
-                    if (message.Id != 0x0312 || message.WParam.ToUInt64() != (ulong)id) continue;
-                    detected++;
-                    string requestId = Guid.NewGuid().ToString("N");
-                    uint age = unchecked((uint)Environment.TickCount - message.Time);
-                    string context = "request_id=" + requestId + " key=F" + functionKey + " detected=" + detected + " queue_age_ms=" + age;
-                    TraceLog.Write("INFO", "hotkey.detected", context + " source=Windows_WM_HOTKEY device=not_reported");
-                    // Do not execute keypresses that backed up while an earlier request timed out.
-                    if (age > 200)
-                    {
-                        TraceLog.Write("WARN", "hotkey.discarded", context + " reason=stale_queued_event max_age_ms=200");
-                        continue;
-                    }
-                    if (testOnly) { TraceLog.Write("INFO", "hotkey.test_passed", context + " network_request=false mouse_input=false"); continue; }
-                    try
-                    {
-                        string status = Transport.Send(address, port, pairingCode, "click", requestId);
-                        TraceLog.Write("INFO", "hotkey.completed", context + " receiver_status=" + status);
-                    }
-                    catch (Exception ex) { TraceLog.Failure("hotkey.request_failed", ex, context); }
-                }
-                if (result == -1) throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-            finally
-            {
-                if (timer != UIntPtr.Zero) KillTimer(IntPtr.Zero, timer);
-                UnregisterHotKey(IntPtr.Zero, id);
-                TraceLog.Write("INFO", "hotkey.unregistered", "key=F" + functionKey + " detected=" + detected);
             }
         }
     }

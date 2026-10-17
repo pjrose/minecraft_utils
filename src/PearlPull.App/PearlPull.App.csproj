@@ -7,7 +7,7 @@
     <RootNamespace>PearlPull.Tray</RootNamespace>
     <LangVersion>5</LangVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <Version>0.5.0</Version>
+    <Version>0.5.1</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <DefineConstants Condition="'$(AppRole)' == 'Receiver'">$(DefineConstants);RECEIVER</DefineConstants>
@@ -19,7 +19,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="Microsoft.CSharp" />
-    <Compile Include="../PearlPull.cs" Link="PearlPull.cs" />
-    <EmbeddedResource Include="../icons/pearl-pull.png" LogicalName="PearlPull.png" />
+    <Compile Include="../PearlPull.Core/PearlPull.cs" Link="PearlPull.cs" />
+    <EmbeddedResource Include="../../assets/pearl-pull.png" LogicalName="PearlPull.png" />
   </ItemGroup>
 </Project>

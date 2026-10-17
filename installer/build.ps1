@@ -8,10 +8,10 @@ New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $optionPrefix = if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { '/' } else { '-' }
 foreach ($role in @('Button', 'Receiver')) {
     $app = Join-Path $OutputDirectory $role
-    & dotnet build (Join-Path $root 'pearl-pull/tray/PearlPull.Tray.csproj') -c Release "-p:AppRole=$role" -o $app --nologo
+    & dotnet build (Join-Path $root 'src/PearlPull.App/PearlPull.App.csproj') -c Release "-p:AppRole=$role" -o $app --nologo
     if ($LASTEXITCODE -ne 0) { throw "The $role build failed." }
     New-Item -ItemType Directory -Path (Join-Path $app 'icons') -Force | Out-Null
-    Copy-Item (Join-Path $root 'pearl-pull/icons/pearl-pull.png') (Join-Path $app 'icons/pearl-pull.png')
+    Copy-Item (Join-Path $root 'assets/pearl-pull.png') (Join-Path $app 'icons/pearl-pull.png')
     Copy-Item (Join-Path $PSScriptRoot 'START-HERE.txt') $app
     & $Makensis "$($optionPrefix)WX" "$($optionPrefix)DROLE=$role" "$($optionPrefix)DAPPDIR=$app" "$($optionPrefix)DOUTDIR=$OutputDirectory" (Join-Path $PSScriptRoot 'PearlPull.nsi')
     if ($LASTEXITCODE -ne 0) { throw "The $role installer build failed." }

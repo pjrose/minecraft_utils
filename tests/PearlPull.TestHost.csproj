@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <LangVersion>5</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/PearlPull.Core/PearlPull.cs" Link="PearlPull.cs" />
+    <Compile Include="../src/PearlPull.App/Settings.cs" Link="Settings.cs" />
+  </ItemGroup>
+</Project>
