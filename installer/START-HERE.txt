@@ -1,0 +1,39 @@
+PEARL PULL - PARENT SETUP
+
+1. Install PearlPull-Receiver-Setup.exe on PC 2 (the trapdoor PC).
+2. Install PearlPull-Button-Setup.exe on PC 1 (the player/Neo PC).
+   Sign in as the child who plays Minecraft when installing each app.
+3. Close the old PowerShell script windows. Existing pairing is reused.
+4. On PC 2, open Receiver. Click Allow home network (parent) and approve
+   Windows' prompt. The home network must be marked Private.
+5. On PC 1, open Button. If not already paired, enter PC 2's home IPv4
+   address and pairing code. Click Save pairing, then Check connection.
+6. Click Copy Neo button URL. In Stream Deck, use System > Website,
+   paste the URL, and enable GET request in background.
+   Open button artwork to find the included pearl icon.
+7. On PC 2, bring Minecraft to the front and aim at the trapdoor.
+   Practice one pearl pull. Re-arm the chamber after use.
+
+DAILY USE
+
+Start Minecraft. Pearl Pull starts at Windows sign-in and runs in the tray.
+Press the Neo button or F8 on PC 1. Closing the settings window keeps it running.
+Double-click the pearl near the Windows clock to check status. Windows may
+place it under the tray's up-arrow. Right-click > Quit stops it deliberately.
+Keep PC 2 awake and signed in. The app does not aim or re-arm the chamber.
+
+TROUBLESHOOTING
+
+Open either app and click Open logs. Logs contain matching request IDs and are
+limited to about 10 MiB per role (five sessions, 1 MiB plus one backup each).
+The app checks the connection every 30 seconds and retries failed listeners.
+No old click is saved to fire when a disconnected PC comes back.
+Startup uses Task Scheduler with crash recovery where allowed; restricted
+accounts fall back to ordinary sign-in startup. Check startup.configured or
+startup.task_unavailable in the logs to see which method is active.
+
+These initial installers and apps are unsigned. If Smart App Control blocks
+them, installation does not bypass it. A trusted signed release is required
+for that deployment. Do not turn off protections merely to test the installer.
+
+Full guide: https://github.com/pjrose/minecraft_utils/blob/main/pearl-pull/TRAY-APPS.md

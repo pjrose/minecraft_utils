@@ -1,11 +1,18 @@
 # Pearl Pull for two Windows PCs
 
+**Recommended for daily use: [install the tray apps](TRAY-APPS.md).** They provide
+graphical pairing, automatic startup, recovery, and log access without a command
+window. The instructions below cover the optional PowerShell version.
+
 Press **F8 on PC 1** to request one right-click on **PC 2**. This uses Windows'
 built-in PowerShell and your home network; no Python, paid app, or Stream Deck
-is required. A Stream Deck can send the same F8 key if you have one.
+is required. A Stream Deck can trigger the sender directly if you have one.
 
 **Stream Deck Neo:** follow the [Neo setup guide](STREAM-DECK-NEO.md) for the
 included button artwork and `Start-StreamDeck-Neo.cmd` launcher.
+
+**Diagnosing a button press:** see the [trace log guide](DIAGNOSTICS.md).
+Use `Open-Logs.cmd` on either PC to open its logs.
 
 **Smart App Control or automatic startup:** see
 [Windows security and sign-in startup](STARTUP-AND-WINDOWS-SECURITY.md).
@@ -83,15 +90,18 @@ files, and repeat setup.
 
 For the eight-key **Stream Deck Neo**, use the illustrated
 [Neo setup guide](STREAM-DECK-NEO.md). It includes a ready-to-use PNG icon and
-a launcher using the same F8 binding as the keyboard sender.
+a direct trigger using **System → Website → GET request in background**.
+Run `Setup-StreamDeck.cmd` on PC 1 to display the local URL for the button.
+This avoids synthetic keyboard input; the physical keyboard's F8 stays active.
 
 Close the sender before recording a hotkey in the Stream Deck editor, so
 recording the key does not trigger a click. Then restart the sender to play.
 
-Configure a Stream Deck **System → Hotkey** action to send **F8**, then start
-the sender on PC 1. This uses the existing connection and avoids launching a
-new PowerShell process for each press. The Stream Deck must be connected to
-PC 1 for this setup.
+The optional **System → Hotkey: F8** action depends on Windows delivering the
+generated global hotkey. If a browser keyboard tester sees F8 but Pearl Pull
+does not, use the direct Website action. Both methods use the resident sender
+and avoid launching a new PowerShell process for every press. Connect the
+Stream Deck to PC 1.
 
 To use another function key, close the sender and run in PowerShell:
 
@@ -99,7 +109,8 @@ To use another function key, close the sender and run in PowerShell:
 .\Sender.ps1 -FunctionKey 9
 ```
 
-This uses F9; supported values are 1–24. F13–F24 are useful for a Stream Deck.
+This uses F9; supported values are 1–24. The direct Neo action is independent
+of this key setting.
 The chosen key is a global hotkey while the sender runs and may conflict with
 other apps. Holding a key does not repeat. Separate clicks within 500 ms are
 discarded instead of queued. Release and press again for a new request.
@@ -108,6 +119,21 @@ For a launcher that needs a one-shot command, `Sender.ps1 -Once` sends a single
 request using the saved settings. A resident sender with a hotkey is faster.
 
 ## Troubleshooting
+
+The [diagnostic guide](DIAGNOSTICS.md) explains sender versus receiver events,
+matching request IDs, log files, and the no-click `Test-Hotkey.cmd` tool.
+
+For **No reply from PC 2**, start with the [connection-check steps](CONNECTION-TROUBLESHOOTING.md).
+They test the actual UDP protocol and compare pairing fingerprints without
+printing the pairing code:
+
+```powershell
+# On PC 2, while Start-Receiver.cmd is running:
+.\Check-Connection.cmd -Role Receiver
+
+# On PC 1:
+.\Check-Connection.cmd -Role Sender
+```
 
 | Result | Meaning / next step |
 | --- | --- |
@@ -130,8 +156,11 @@ Windows session is unsuitable; keep the second PC awake and its desktop active.
 
 ## How it works
 
-The sender registers F8 with Windows. On each press, it sends a signed UDP
-request to port 48123. The receiver authenticates it, checks Minecraft focus,
+The sender registers F8 with Windows and listens for authorized local Neo GET
+requests on `127.0.0.1:48124`. Either trigger sends a signed UDP request to
+port 48123. The local endpoint uses a separate random token stored in the
+sender settings; no additional firewall rule is needed for it.
+The receiver authenticates the UDP request, checks Minecraft focus,
 and sends one right-button press/release, held for 50 ms. A signed reply reports
 the result. It accepts only `ping` and `click`, never shell commands.
 
@@ -155,6 +184,7 @@ python3 -m unittest discover -s pearl-pull/tests -v
 Set `PEARL_PULL_PWSH` to the PowerShell executable if it is not named `pwsh`.
 The suite exercises the actual C# handler and the sender/receiver scripts on
 loopback, including authentication, replay rejection, focus gating, cooldown,
-and retry behavior. It uses `-DryRun`, temporary settings, and fake desktop
+retry behavior, the direct Stream Deck HTTP-to-UDP path, and log redaction,
+rotation, and retention. It uses `-DryRun`, temporary settings, and fake desktop
 callbacks; it never injects mouse input. Actual Win32 input and hotkey behavior
 must be tested on the Windows PCs using the first-setup checks above.

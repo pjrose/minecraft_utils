@@ -1,79 +1,90 @@
 # Pearl Pull on Stream Deck Neo
 
+**Using the installed tray apps?** In **Pearl Pull Button**, click **Copy Neo
+button URL**, then configure **System → Website → GET request in background**.
+Use **Open button artwork** to find the PNG. See the [tray app guide](TRAY-APPS.md).
+The launchers below are for the optional script version.
+
 <img src="icons/pearl-pull.png" alt="Teal pixel-art pearl floating above a purple teleport ring" width="144" height="144">
 
-One press on your Neo sends the same **F8** request as the keyboard shortcut:
-one right-click on the second PC. The Neo connects to **PC 1**, where your son
-plays. **PC 2** runs the receiver, with Minecraft aimed at the trapdoor.
+Connect the Neo to **PC 1**, where your son plays. Its button sends a local
+request to the resident sender, which requests one right-click from **PC 2**.
+PC 2 must have Minecraft in front, aimed at the trapdoor.
 
-The included [PNG icon](icons/pearl-pull.png) is ready to assign to a key. The
-Stream Deck app scales the square image to fit the Neo's display. It has no
-baked-in text, so it stays readable on a small button.
+Use **System → Website** with **GET request in background**. This avoids the
+synthetic F8 input that can appear in a browser keyboard tester without reaching
+Windows' global hotkey handler. The physical keyboard's F8 still works.
 
-## Set up the Neo button
+## Set up or update the Neo button
 
-1. Connect **Stream Deck Neo to PC 1** and open the Elgato **Stream Deck** desktop
-   app. If needed, get the app from [Elgato Downloads](https://www.elgato.com/downloads).
-2. **Close any running Pearl Pull sender window before recording F8.** This
-   prevents the editor's key-recording step from triggering a click on PC 2.
-   This includes `Start-Hotkey.cmd` and `Start-StreamDeck-Neo.cmd` windows.
-3. Select your **Neo** in the device selector. In your usual profile, drag
-   **System → Hotkey** onto one of its eight square keys. The bottom-left key
-   can be easy to reach beside a keyboard. Use the regular Hotkey action for
-   this button.
-4. Click the **Hotkey** field and press **F8**. Leave the **Title** blank for the
-   clean icon, or use a short title such as `PEARL` if you prefer.
-5. Open the selected key's icon menu, choose **Set from File**, and select
-   **`icons\pearl-pull.png`** from this folder. Your Neo should now show the
-   teal pearl and purple ring. Keep the button on a page/profile you use while
-   playing Minecraft.
+1. Update the entire `pearl-pull` folder on **both PCs** and restart their
+   utilities. If using a downloaded ZIP, unblock it before extraction. Existing
+   pairing settings are kept outside the project folder.
+2. Complete the [network pairing and firewall setup](README.md#first-setup)
+   if needed. On **PC 1**, double-click **Setup-StreamDeck.cmd**. It reuses
+   saved pairing settings or prompts for PC 2's address and pairing code.
+3. Copy the local URL it displays. It starts with `http://127.0.0.1:48124/pull/`
+   and ends with a private token. Use the URL exactly as shown; the address is
+   PC 1's loopback address, not PC 2's home IP. Setup does not send a click.
+4. In the Elgato **Stream Deck** desktop app on PC 1, select your Neo and drag
+   **System → Website** onto a key. Replace the previous Hotkey action if you
+   already made one. Paste the copied URL into **URL** and enable
+   **GET request in background**. This keeps the game focused when pressed.
+5. Leave **Title** blank or use `PEARL`. Open the button's icon menu, choose
+   **Set from File**, and select **[icons/pearl-pull.png](icons/pearl-pull.png)**.
+   Keep it on the profile/page active while playing Minecraft.
 
-This uses Stream Deck's built-in Hotkey action. You do not need to install a
-custom Stream Deck plugin or import a device profile.
+The built-in Website action needs no custom plugin or device profile. Keep the
+URL private: it authorizes a click through the sender on this PC. It uses a
+separate token from the PC 2 pairing code and is excluded from the utility's
+log files. Re-running Setup shows the same URL. Deleting the sender settings
+creates a new token and requires updating the button.
 
 ## Start playing
 
-1. Complete the [first-time network pairing and firewall setup](README.md#first-setup)
-   if you have not already. Use **Start-StreamDeck-Neo.cmd** on PC 1 in place
-   of **Start-Hotkey.cmd**; it asks for the same PC 2 address and pairing code
-   on first use and reuses existing settings thereafter. If both tools are
-   still running from first setup, continue at step 4.
-2. On **PC 2**, open **Start-Receiver.cmd**, then return to Minecraft. Leave
-   the second account still, in reach, with the crosshair on the trapdoor and
-   menus/chat closed.
-3. On **PC 1**, open **Start-StreamDeck-Neo.cmd**. Wait for
-   `Network check: ready` and the F8 instruction. Keep this window running;
-   you can minimize it. Run one sender at a time.
-4. Press the **pearl icon on the Neo once**. The sender requests a single
-   right-click on PC 2. The keyboard's F8 key remains available as well.
+1. On **PC 2**, run **Start-Receiver.cmd**. Return to Minecraft, close menus/chat,
+   and leave the crosshair aimed at the trapdoor within reach.
+2. On **PC 1**, run **Start-StreamDeck-Neo.cmd**. Look for
+   `streamdeck.listening bind=127.0.0.1:48124` and `Network check: ready`.
+   Keep this window open; you can minimize it. Run one sender at a time.
+3. Press the pearl button once. PC 1 logs **`streamdeck.triggered`**, then
+   **`streamdeck.completed`** with the receiver's result. Physical F8 instead
+   logs **`hotkey.detected`** and **`hotkey.completed`**.
 
-Try this with an expendable pearl first. Confirm that the trapdoor operates
-and the intended player teleports. Keep the receiver window running and
-Minecraft focused on PC 2, and re-arm the chamber after use.
+Practice with an expendable pearl and confirm the actual teleport. Re-arm the
+chamber after use. The static icon does not report chamber readiness or success.
 
-Once that works, you can [install automatic startup at Windows sign-in](STARTUP-AND-WINDOWS-SECURITY.md#start-automatically-when-the-player-signs-in)
-on each PC so the daily launchers are no longer needed. The Neo still sends F8.
-
-The icon is a static button label. It does not indicate whether the chamber is
-armed, the receiver is connected, or the teleport succeeded. The sender window
-shows request results such as `clicked`, `unfocused`, or `cooldown`; see the
-[troubleshooting table](README.md#troubleshooting) for their meanings.
+The normal sender and [sign-in startup task](STARTUP-AND-WINDOWS-SECURITY.md#start-automatically-when-the-player-signs-in)
+both start this local endpoint automatically. If the startup task already runs
+the sender, restart that task after updating; do not launch a second copy.
+No new firewall rule or administrator rights are needed on PC 1: the endpoint
+only listens on `127.0.0.1`.
 
 ## If pressing the Neo key does nothing
 
-- Confirm the button is **System → Hotkey: F8**, and that the F8 sender is running
-  on the same PC that the Neo is connected to. The button sends a hotkey; it
-  does not launch the sender itself.
-- Press physical **F8** on PC 1. If that works, check the Neo's active page,
-  profile, and hotkey assignment. If both fail, use the main troubleshooting
-  guide to check the receiver and network.
-- An `unfocused` result means PC 2 needs to return to Minecraft. Aim at the
-  trapdoor again after closing menus or changing windows.
-- Close duplicate sender windows if you see “hotkey already registered.”
+- Confirm **System → Website**, the copied URL, and **GET request in background**
+  in the active Neo profile. The button does not launch the sender itself.
+- Look for **`streamdeck.triggered` on PC 1**. If missing, inspect the sender's
+  startup errors and `streamdeck.listening` line. `streamdeck.rejected` means
+  a request reached it but had the wrong URL, token, host, or HTTP method.
+- `unfocused` means PC 2 needs Minecraft in front. `input-error` means focus
+  changed or Windows rejected mouse input. See the [log guide](DIAGNOSTICS.md)
+  for the complete request sequence and where to find logs on both PCs.
+- If F8 is already claimed by another app and you only want the Neo, close the
+  sender and run `Start-StreamDeck-Neo.cmd -StreamDeckOnly` from PowerShell.
+  This runs the direct trigger without registering a hotkey.
+- If TCP port 48124 is in use, close duplicate senders first. To deliberately
+  use another port, run both `Setup-StreamDeck.cmd -StreamDeckPort 48125` and
+  `Start-StreamDeck-Neo.cmd -StreamDeckPort 48125`, then update the button URL.
+  The startup task uses the default port.
+
+If you prefer **System → Hotkey: F8**, it remains an optional path, but depends
+on Windows receiving the generated hotkey. Close the sender before recording
+F8 in the Stream Deck editor to avoid triggering a click. Use
+**Test-Hotkey.cmd** to compare physical and generated F8 without contacting PC 2.
 
 ## Artwork
 
 The included icon is original AI-generated artwork made for this utility.
-The full square PNG is included so you can use it directly in the Stream Deck
-app. The button integration uses the existing authenticated sender/receiver;
-the icon contains no configuration or pairing information.
+The Stream Deck app scales the square PNG to fit the Neo display. It contains
+no configuration or pairing information.

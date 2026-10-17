@@ -1,5 +1,9 @@
 # Windows security and automatic startup
 
+The [installed tray apps](TRAY-APPS.md) start automatically by default and
+include startup controls in their windows. The manual Task Scheduler commands
+below are for the older script version. Both versions are currently unsigned.
+
 Smart App Control and automatic startup are separate settings. A startup task
 still has to pass Windows' security checks. This version of Pearl Pull is
 unsigned and compiles its C# input helper at runtime, so it can be blocked by
@@ -16,7 +20,9 @@ precompiled application and helper binaries signed by a trusted publisher.
 Microsoft's [Smart App Control signing guidance](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control)
 requires a certificate from a trusted provider. A locally generated,
 self-signed certificate does not establish that trust. This repository does
-not yet include such a signed release. Signing just the PowerShell launcher
+not yet include such a signed release. The new tray apps compile the helper
+ahead of time, but their executables and installers still need trusted signing.
+Signing just the PowerShell launcher
 does not make the dynamically compiled helper a trusted, signed binary.
 
 If you choose to turn Smart App Control off on your own PC, open:
@@ -74,9 +80,11 @@ launchers; Smart App Control still applies. It installs a named Task Scheduler
 task for the current user and requests a start immediately. Check its minimized window for successful
 startup. On subsequent Windows sign-ins it starts automatically, minimized,
 with normal user permissions. It uses the saved pairing settings and does not
-store a Windows password. The sender uses **F8**; to use a different function
-key, install with, for example, `-Role Sender -FunctionKey 9` and update the
-Stream Deck assignment to match.
+store a Windows password. The sender uses **F8** and also starts the direct Neo
+trigger on port 48124. Configure the Neo with
+[Setup-StreamDeck.cmd and the Website action](STREAM-DECK-NEO.md).
+To use a different physical function key, install with, for example,
+`-Role Sender -FunctionKey 9`; the direct Neo URL stays the same.
 
 If task registration reports **Access denied**, have an administrator help
 with Task Scheduler permissions. The task must remain assigned to the actual
@@ -87,7 +95,8 @@ that account's desktop and pairing settings.
 The task has no execution time limit and permits operation on battery power.
 Task Scheduler is configured to retry a failed process up to three times, one
 minute apart. After repeated failures, inspect the minimized window or Task
-Scheduler, fix the cause, then start the task again. It does not restart a
+Scheduler or open the [log files](DIAGNOSTICS.md), fix the cause, then start
+the task again. It does not restart a
 task you explicitly stop through Task Scheduler.
 
 PC 1 can start before PC 2: a failed initial network check now prints a warning
