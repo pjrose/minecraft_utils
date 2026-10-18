@@ -109,6 +109,30 @@ class PearlPullTests(unittest.TestCase):
     def test_core_checks(self):
         self.assertIn("Core checks passed: 25", self.run_host("core").stdout)
 
+    def test_pairing_approval_crypto_retry_expiry_and_request_binding(self):
+        result = self.run_host("pairing-core")
+        self.assertIn("Pairing checks passed: 30", result.stdout)
+        self.assertNotIn(KEY, result.stdout + result.stderr)
+
+    def test_pairing_retries_lost_approval_and_ignores_forged_replies(self):
+        result = self.run_host("pairing-replies", unused_port())
+        self.assertIn("Pairing retry and forged-reply checks passed", result.stdout)
+        self.assertNotIn(KEY, result.stdout + result.stderr)
+
+    def test_offline_pairing_has_bounded_timeout_and_setup_guidance(self):
+        self.assertIn("Offline pairing timeout passed", self.run_host("pairing-offline", unused_port()).stdout)
+
+    def test_live_pairing_accept_decline_cancel_and_existing_connection(self):
+        for decision in ("accept", "decline", "cancel"):
+            with self.subTest(decision=decision), tempfile.TemporaryDirectory() as directory:
+                result = self.run_host("pairing-live", decision, unused_port(), directory)
+                self.assertIn(f"Live pairing {decision} passed", result.stdout)
+                trace = read_logs(Path(directory), "pairing")
+                self.assertIn("pairing.requested", trace)
+                self.assertNotIn(KEY, trace + result.stdout + result.stderr)
+                self.assertNotIn("command=click", trace)
+                self.assertEqual("pairing.completed" in trace, decision == "accept")
+
     def test_readiness_retries_windows_connection_reset_but_not_other_errors(self):
         client = Mock()
         def ready(_):

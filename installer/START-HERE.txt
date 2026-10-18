@@ -6,8 +6,12 @@ PEARL PULL - PARENT SETUP
 3. Close the old PowerShell script windows. Existing pairing is reused.
 4. On PC 2, open Receiver. Click Allow home network (parent) and approve
    Windows' prompt. The home network must be marked Private.
-5. On PC 1, open Button. If not already paired, enter PC 2's home IPv4
-   address and pairing code. Click Save pairing, then Check connection.
+5. Update BOTH apps to version 0.6.0 or newer for approval pairing.
+   On PC 1, open Button. If not already paired, enter PC 2's home IPv4
+   address and click Pair with PC 2. Compare the short codes on both screens,
+   then click Accept pairing on PC 2 within one minute. Nothing to copy!
+   Only accept a matching request you started. Check connection sends no click.
+   Existing pairing and Neo buttons keep working after upgrades.
 6. Click Copy Neo button URL. In Stream Deck, use System > Website,
    paste the URL, and enable GET request in background.
    Open button artwork to find the included pearl icon.

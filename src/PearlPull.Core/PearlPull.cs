@@ -16,7 +16,7 @@ namespace PearlPull
 {
     public static class TraceLog
     {
-        public const string Build = "0.5.1";
+        public const string Build = "0.6.0";
         public static event Action<string, string, string> Entry;
         private static readonly object Gate = new object();
         private static readonly Regex Secret = new Regex("[0-9a-fA-F]{64}");
@@ -328,7 +328,7 @@ namespace PearlPull
             string timeoutContext = command == "ping"
                 ? " This was a connectivity check; no click was requested."
                 : " The click may have happened if replies were lost; check before retrying.";
-            throw new TimeoutException("No reply from PC 2. Check its receiver, IP address, pairing code, firewall, and Windows clock synchronization." + timeoutContext);
+            throw new TimeoutException("No reply from PC 2. Check its receiver, IP address, saved pairing, firewall, and Windows clock synchronization." + timeoutContext);
         }
 
         public static void Listen(string address, int port, string pairingCode, bool dryRun)
@@ -336,6 +336,10 @@ namespace PearlPull
             Listen(address, port, pairingCode, dryRun, CancellationToken.None);
         }
         public static void Listen(string address, int port, string pairingCode, bool dryRun, CancellationToken cancellation)
+        {
+            Listen(address, port, pairingCode, dryRun, cancellation, null);
+        }
+        public static void Listen(string address, int port, string pairingCode, bool dryRun, CancellationToken cancellation, PairingServer pairing)
         {
             byte[] key = Protocol.ParseKey(pairingCode);
             RequestHandler handler = new RequestHandler(key, dryRun, DesktopInput.IsMinecraftFocused, DesktopInput.RightClick);
@@ -372,12 +376,15 @@ namespace PearlPull
                     if (cancellation.IsCancellationRequested) break;
                     received++;
                     TraceLog.Write("TRACE", "packet.received", "peer=" + peer + " bytes=" + packet.Length + " packet_number=" + received);
-                    byte[] reply = handler.Handle(packet, Protocol.NowMs(), uptime.ElapsedMilliseconds);
+                    bool isPairing = PairingServer.IsRequest(packet);
+                    byte[] reply = isPairing
+                        ? (pairing == null ? null : pairing.Handle(packet, peer, Protocol.NowMs()))
+                        : handler.Handle(packet, Protocol.NowMs(), uptime.ElapsedMilliseconds);
                     if (reply == null) continue;
                     try { socket.Send(reply, reply.Length, peer); }
                     catch (SocketException ex) { TraceLog.Failure("receiver.reply_failed", ex, "peer=" + peer); throw; }
                     string[] fields = Encoding.ASCII.GetString(reply).Split('|');
-                    TraceLog.Write("INFO", "reply.sent", "request_id=" + fields[1] + " peer=" + peer + " status=" + fields[2]);
+                    TraceLog.Write("INFO", isPairing ? "pairing.reply_sent" : "reply.sent", "request_id=" + fields[1] + " peer=" + peer + " status=" + fields[2]);
                 }
                 TraceLog.Write("INFO", "receiver.stopped", "listener_closed=true");
             }

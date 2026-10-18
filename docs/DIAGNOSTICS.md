@@ -10,9 +10,11 @@ receives network requests and sends the right-click. PC 2 does not listen for F8
    script windows or duplicate receiver apps if it is retrying the listener.
 2. On PC 1, open **Button** and click **Check connection**. This sends a ping,
    never a mouse click. Confirm its saved address matches PC 2's home IPv4 address.
-3. If PC 2 is not answering, check both pairing codes and the network port. On
+3. If PC 2 is not answering, check the saved address and the network port. On
    PC 2, use **Allow home network (parent)** and make sure the trusted home
    network is marked **Private**. Guest Wi-Fi or a VPN can isolate the PCs.
+   If the logs report authentication failure, click **Pair with PC 2** and
+   accept the matching short code on Receiver to pair again.
 4. Keep Windows clocks synchronized on both PCs. Use **Settings → Time &
    language → Date & time → Sync now** if the logs report `clock_skew`.
 
@@ -20,6 +22,18 @@ The sender checks the connection every 30 seconds and keeps working when PC 2
 comes back. A `ready` response verifies network and pairing, not Minecraft focus
 or the chamber. Bring Minecraft to the front on PC 2, close menus/chat, and aim
 at the trapdoor before pressing the pearl button.
+
+## If pairing does not finish
+
+Install version 0.6.0 or newer on **both PCs**. Enter PC 2's address on PC 1
+and click **Pair with PC 2**. Receiver on PC 2 should open an approval prompt.
+Compare the short codes before accepting. No long code needs to be copied.
+
+Requests expire after one minute. A decline, timeout, or cancellation leaves
+PC 1's previous settings intact. Canceling on PC 1 lets PC 2's prompt expire;
+you can decline it on PC 2 to dismiss it sooner. Only one request can await
+approval, and new prompts are limited to one every ten seconds. A successful
+approval does not rotate the key for other paired PCs or change the Neo URL.
 
 ## If the Neo button does nothing
 
@@ -45,6 +59,11 @@ have `command=ping` and never click.
 
 | Event | What it establishes |
 | --- | --- |
+| PC 1 `pairing.started` / `pairing.awaiting_approval` | A request was sent / PC 2 received it and is waiting for approval. |
+| PC 2 `pairing.requested` | The request is ready for a short-code comparison and explicit approval. |
+| PC 2 `pairing.accepted` / `pairing.declined` / `pairing.expired` | The approval decision or timeout; only acceptance releases an encrypted key. |
+| PC 1 `pairing.completed` | The encrypted key arrived and an authenticated ping succeeded. |
+| PC 1 `pairing.failed` / `pairing.canceled` | Pairing did not finish; previous settings remain. |
 | PC 1 `streamdeck.listening` | The local Neo endpoint is ready. |
 | PC 1 `streamdeck.triggered` | An authorized local GET arrived. |
 | PC 1 `hotkey.registered` | Windows accepted F8 registration. |
@@ -80,7 +99,7 @@ Active files from an old process may remain until that process closes. Logs
 flush after each line and include no pairing codes, Neo tokens, raw packets,
 or HTTP trigger URLs. They contain local IP addresses, file paths, and foreground
 process names, so review them before sharing. They do not record other keys or
-window titles. Avoid screenshots that expose the pairing code or Neo URL.
+window titles. Keep saved pairing keys and the Neo URL private.
 
 If Smart App Control prevents the executable from starting, there may be no
 app log. These builds are unsigned; see [setup and Windows security](SETUP.md#windows-security).

@@ -20,7 +20,12 @@ Your child does not need PowerShell or a command line.
    using **Open Windows network settings** if necessary. The rule allows only
    the configured UDP port from the local subnet on Private networks.
 4. Open **Button** on PC 1. Existing pairing is loaded automatically. Otherwise,
-   enter PC 2's displayed IPv4 address and pairing code, then **Save pairing**.
+   enter PC 2's displayed IPv4 address, then click **Pair with PC 2**. Receiver
+   on PC 2 opens an **Accept pairing** request showing PC 1's address. Compare
+   the eight letters/numbers on both screens (displayed as `ABCD-2345`), then
+   click **Accept pairing** on PC 2. There is nothing to type or copy. Only
+   accept if the codes match and you started the request. Finish within one
+   minute; expired or declined requests can be retried from PC 1.
    **Check connection** tests the network without clicking.
 5. Click **Copy Neo button URL**. In Stream Deck, replace the old Hotkey action
    with **System → Website**, paste the URL, and enable **GET request in
@@ -33,6 +38,15 @@ Your child does not need PowerShell or a command line.
 The apps require .NET Framework 4.8, included with Windows 11 and recent
 Windows 10. Setup checks for it. No PowerShell execution policy or runtime C#
 compilation is involved in the installed apps.
+
+Approval pairing requires **version 0.6.0 or newer on both PCs**. The apps
+exchange their long authentication key automatically, encrypted for PC 1;
+the short code is only a visual check and is not the saved password. Existing
+pairings and Neo URLs are preserved on upgrade and when pairing again.
+**Cancel pairing** on PC 1 preserves its previous settings; PC 2's prompt will
+expire automatically. **Forget paired PCs** on PC 2 revokes all existing
+pairings, so each PC must request approval again. After setup, bring Minecraft
+back to the front on PC 2.
 
 ## Windows security
 

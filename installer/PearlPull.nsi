@@ -20,10 +20,10 @@ InstallDir "$LOCALAPPDATA\Programs\PearlPull\${ROLE}"
 InstallDirRegKey HKCU "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.5.1.0"
+VIProductVersion "0.6.0.0"
 VIAddVersionKey "ProductName" "${PRODUCT}"
 VIAddVersionKey "FileDescription" "${PRODUCT} installer"
-VIAddVersionKey "FileVersion" "0.5.1"
+VIAddVersionKey "FileVersion" "0.6.0"
 VIAddVersionKey "LegalCopyright" "MinecraftUtils contributors"
 !define MUI_WELCOMEPAGE_TITLE "Install ${PRODUCT}"
 !define MUI_WELCOMEPAGE_TEXT "Install Button on PC 1 and Receiver on PC 2.$\r$\n$\r$\nPearl Pull runs beside the Windows clock and starts automatically when this user signs in. No PowerShell window is needed.$\r$\n$\r$\nClose old Pearl Pull script windows before continuing. Saved pairing settings are reused.$\r$\n$\r$\nInstall while signed in as the Windows user who plays Minecraft."
@@ -73,7 +73,7 @@ Section "Install"
   WriteRegDWORD HKCU "Software\MinecraftUtils\PearlPull" "${ROLE}StartupDisabled" 0
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MinecraftUtils-PearlPull-${ROLE}" '"$INSTDIR\${APP}" --background'
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT}"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.5.1"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.6.0"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "MinecraftUtils"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'

@@ -24,6 +24,9 @@ The suite compiles its test host once and exercises the same C# source as the
 tray apps. It covers 25 protocol/input-handler assertions, real UDP and local
 HTTP requests, duplicate/retry handling, authentication and clock rejection,
 log limits/redaction, saved-setting migration, and graceful receiver shutdown.
+Approval pairing tests exercise encrypted key transfer, short-code/key binding,
+duplicate requests, endpoint binding, rejection, expiry, prompt rate limits,
+and live acceptance/decline/cancellation while existing connections keep working.
 It uses generated public fixtures and dry-run receivers, never the family's
 pairing code or actual mouse input.
 
@@ -36,6 +39,22 @@ network assertions remain strict.
 Set `PEARL_PULL_DOTNET` to the SDK executable if it is not named `dotnet` on PATH.
 The test host is built under ignored `artifacts/tests/`. There is no PowerShell
 runtime or dynamic `Add-Type` compilation in these tests.
+
+## Approval pairing
+
+Pairing shares the existing UDP port and firewall rule. PC 1 creates a fresh
+2048-bit RSA key and request ID. Both apps display an eight-character code
+(40 bits from SHA-256) bound to the request, including its public key. A parent
+must compare the codes and accept on PC 2. The receiver returns its existing
+256-bit control key encrypted with RSA-OAEP (SHA-1 for .NET Framework CSP
+compatibility). PC 1 verifies an authenticated ping before saving. The short
+code is not used as the control key. Keys and packet bodies are never logged.
+
+Requests have a one-minute deadline, bind retries to the original public key
+and UDP endpoint, cache the approval result, and limit new prompts to one per
+ten seconds with only one pending approval. Comparing the screens protects
+against public-key substitution during first pairing. Approval adds access;
+Forget paired PCs rotates the receiver key and revokes previous access.
 
 ## Apps and installers
 

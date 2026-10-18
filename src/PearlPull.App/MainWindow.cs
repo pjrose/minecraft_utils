@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
@@ -19,9 +20,11 @@ namespace PearlPull.Tray
         private readonly Label status = new Label { AutoSize = true, MaximumSize = new Size(550, 0), Padding = new Padding(12), BackColor = Color.FromArgb(232, 245, 242) };
         private readonly Label inputStatus = new Label { AutoSize = true, MaximumSize = new Size(550, 0) };
         private readonly TextBox address = new TextBox { Width = 250 };
-        private readonly TextBox pairing = new TextBox { Width = 490, UseSystemPasswordChar = true };
+        private readonly Label pairingStatus = new Label { AutoSize = true, MaximumSize = new Size(540, 0), Margin = new Padding(0, 12, 0, 6) };
+        private readonly Label pairingCode = new Label { AutoSize = true, Font = new Font("Segoe UI", 18, FontStyle.Bold) };
+        private readonly FlowLayoutPanel approvalButtons = new FlowLayoutPanel { AutoSize = true, Visible = false };
         private readonly NumericUpDown port = new NumericUpDown { Minimum = 1024, Maximum = 65535, Value = 48123, Width = 110 };
-        private readonly Button save = new Button { Text = "Save pairing", AutoSize = true };
+        private readonly Button pair = new Button { Text = "Pair with PC 2", AutoSize = true };
         private readonly Button test = new Button { Text = "Check connection", AutoSize = true };
         private readonly CheckBox startup = new CheckBox { Text = "Start with Windows", AutoSize = true };
         private readonly Label startupStatus = new Label { AutoSize = true, MaximumSize = new Size(550, 0), ForeColor = Color.DimGray };
@@ -35,6 +38,9 @@ namespace PearlPull.Tray
         private HotkeyWindow hotkey;
         private CancellationTokenSource receiverStop;
         private Task receiverTask;
+        private PairingServer pairingServer;
+        private PairingOffer pairingOffer;
+        private CancellationTokenSource pairingStop;
         private bool exiting, checking;
         private int seconds;
         private int generation;
@@ -79,17 +85,16 @@ namespace PearlPull.Tray
                 body.Controls.Add(new TextBox { Text = addresses, Multiline = true, ReadOnly = true, Width = 490, Height = 56 });
             }
             else body.Controls.Add(address);
-            body.Controls.Add(LabelFor(Program.IsReceiver ? "Pairing code for PC 1 (parent setup)" : "Pairing code shown on PC 2"));
-            pairing.ReadOnly = Program.IsReceiver;
-            body.Controls.Add(pairing);
-            CheckBox reveal = new CheckBox { Text = "Show pairing code", AutoSize = true };
-            reveal.CheckedChanged += delegate { pairing.UseSystemPasswordChar = !reveal.Checked; };
-            body.Controls.Add(reveal);
+            pairingStatus.Text = Program.IsReceiver ? "Ready for a pairing request from PC 1." : "Enter PC 2's address, then click Pair with PC 2.";
+            body.Controls.Add(pairingStatus);
+            body.Controls.Add(pairingCode);
             if (Program.IsReceiver)
             {
-                body.Controls.Add(Row(ActionButton("Copy pairing code", delegate { if (settings != null) Clipboard.SetText(settings.PairingCode); }),
-                    ActionButton("Allow home network (parent)", ConfigureFirewall)));
-                body.Controls.Add(ActionButton("Create a new pairing code", ResetPairing));
+                approvalButtons.Controls.Add(ActionButton("Accept pairing", delegate { DecidePairing(true); }));
+                approvalButtons.Controls.Add(ActionButton("Decline", delegate { DecidePairing(false); }));
+                body.Controls.Add(approvalButtons);
+                body.Controls.Add(ActionButton("Allow home network (parent)", ConfigureFirewall));
+                body.Controls.Add(ActionButton("Forget paired PCs", ResetPairing));
                 body.Controls.Add(ActionButton("Open Windows network settings", delegate { WindowsIntegration.Open("ms-settings:network-status"); }));
                 body.Controls.Add(new Label { Text = "Use a Private home network. Allow access once with a parent.\nThe receiver only clicks while Minecraft is in front.", AutoSize = true });
             }
@@ -97,9 +102,9 @@ namespace PearlPull.Tray
             {
                 FlowLayoutPanel portRow = Row(new Label { Text = "Network port", AutoSize = true, Padding = new Padding(0, 5, 0, 0) }, port);
                 body.Controls.Add(portRow);
-                save.Click += delegate { SavePairing(); };
+                pair.Click += delegate { RequestPairing(); };
                 test.Click += async delegate { await CheckConnection(); };
-                body.Controls.Add(Row(save, test));
+                body.Controls.Add(Row(pair, test));
                 body.Controls.Add(ActionButton("Copy Neo button URL", CopyNeoUrl));
                 body.Controls.Add(new Label { Text = "Neo: System > Website, paste the URL, then enable\nGET request in background. Use the included pearl icon.", AutoSize = true });
                 body.Controls.Add(ActionButton("Open button artwork", delegate { WindowsIntegration.Open(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icons")); }));
@@ -121,6 +126,11 @@ namespace PearlPull.Tray
             {
                 if (quitSignal.WaitOne(0)) { Quit(); return; }
                 if (showSignal.WaitOne(0)) ShowWindow();
+                if (pairingOffer != null && (pairingServer == null || pairingServer.Pending == null))
+                {
+                    ClearPairingOffer();
+                    pairingStatus.Text = "Pairing request expired. Try again from PC 1.";
+                }
                 if (settings != null && !Program.IsReceiver && !smokeTest && seconds % 5 == 0 && (trigger == null || hotkey == null)) StartSenderInputs();
                 if (++seconds % 30 == 0)
                 {
@@ -170,10 +180,10 @@ namespace PearlPull.Tray
                     settings = new Settings { PairingCode = Protocol.NewKey() };
                     settings.Save(true);
                 }
-                if (settings == null) { SetStatus("Enter PC 2's address and pairing code, then Save pairing.", false); return; }
+                if (settings == null) { SetStatus("Enter PC 2's address, then click Pair with PC 2.", false); return; }
                 address.Text = settings.Address;
-                pairing.Text = settings.PairingCode;
                 port.Value = settings.Port;
+                if (!Program.IsReceiver) pairingStatus.Text = "Pairing saved. No code to enter.";
                 StartServices();
             }
             catch (Exception ex)
@@ -191,11 +201,27 @@ namespace PearlPull.Tray
                 receiverStop = new CancellationTokenSource();
                 CancellationToken cancellation = receiverStop.Token;
                 Settings current = settings;
+                PairingServer server = null;
+                server = new PairingServer(current.PairingCode, delegate(PairingOffer offer)
+                {
+                    BeginInvoke((Action)delegate
+                    {
+                        if (exiting || pairingServer != server || server.Pending != offer) return;
+                        pairingOffer = offer;
+                        pairingStatus.Text = "Accept pairing from " + offer.Address + "?\nCheck that this code matches PC 1. Only accept a request you started.";
+                        pairingCode.Text = offer.Code;
+                        approvalButtons.Visible = true;
+                        ShowWindow();
+                        ((ScrollableControl)approvalButtons.Parent).ScrollControlIntoView(approvalButtons);
+                        tray.ShowBalloonTip(5000, "Pearl Pull pairing", "Compare the short code and accept the request in Receiver.", ToolTipIcon.Info);
+                    });
+                });
+                pairingServer = server;
                 receiverTask = Task.Factory.StartNew(delegate
                 {
                     while (!cancellation.IsCancellationRequested)
                     {
-                        try { Transport.Listen("0.0.0.0", current.Port, current.PairingCode, false, cancellation); }
+                        try { Transport.Listen("0.0.0.0", current.Port, current.PairingCode, false, cancellation, server); }
                         catch (Exception ex) { TraceLog.Failure("receiver.failed", ex, "retry_in_seconds=5 close_old_receiver_if_port_in_use=true"); }
                         if (cancellation.WaitHandle.WaitOne(5000)) break;
                     }
@@ -231,9 +257,23 @@ namespace PearlPull.Tray
         }
         private void ResetPairing()
         {
-            if (MessageBox.Show(this, "Create a new pairing code? PC 1 must then be paired again.", Program.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (MessageBox.Show(this, "Forget all paired PCs? They must request pairing again before they can pull a pearl.", Program.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             Settings next = new Settings { PairingCode = Protocol.NewKey(), Port = settings == null ? Protocol.DefaultPort : settings.Port };
-            next.Save(true); settings = next; pairing.Text = next.PairingCode; StartServices();
+            next.Save(true); settings = next; StartServices();
+            pairingStatus.Text = "Paired PCs forgotten. Request pairing again from PC 1.";
+        }
+        private void ClearPairingOffer()
+        {
+            pairingOffer = null; pairingCode.Text = ""; approvalButtons.Visible = false;
+        }
+        private void DecidePairing(bool accept)
+        {
+            if (pairingOffer == null || pairingServer == null) return;
+            bool decided = pairingServer.Decide(pairingOffer.Id, accept);
+            ClearPairingOffer();
+            pairingStatus.Text = !decided ? "Pairing request expired. Try again from PC 1." : accept
+                ? "Pairing accepted. PC 1 will confirm the connection.\nBring Minecraft back to the front when setup is finished."
+                : "Pairing declined. This PC was not granted access.";
         }
         private void ConfigureStartup()
         {
@@ -243,6 +283,8 @@ namespace PearlPull.Tray
         private void StopServices()
         {
             generation++;
+            if (pairingServer != null) { pairingServer.Close(); pairingServer = null; }
+            if (Program.IsReceiver) ClearPairingOffer();
             if (hotkey != null) { hotkey.Dispose(); hotkey = null; }
             if (trigger != null) { trigger.Dispose(); trigger = null; }
             if (receiverStop != null)
@@ -252,22 +294,52 @@ namespace PearlPull.Tray
                 receiverStop.Dispose(); receiverStop = null; receiverTask = null;
             }
         }
-        private async void SavePairing()
+        private async void RequestPairing()
         {
+            if (pairingStop != null) { pairingStop.Cancel(); return; }
+            IPAddress parsed;
+            if (!IPAddress.TryParse(address.Text.Trim(), out parsed) || parsed.AddressFamily != AddressFamily.InterNetwork)
+            {
+                MessageBox.Show(this, "Enter the home IPv4 address shown on PC 2.", Program.Title); return;
+            }
+            string destination = parsed.ToString();
+            int destinationPort = (int)port.Value;
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            pairingStop = cancellation;
+            pair.Text = "Cancel pairing"; address.Enabled = false; port.Enabled = false;
             try
             {
-                Settings next = new Settings { Address = address.Text.Trim(), PairingCode = pairing.Text.Trim(), Port = (int)port.Value,
+                string secret;
+                using (PairingClient client = new PairingClient())
+                {
+                    pairingStatus.Text = "On PC 2, check this code matches and click Accept pairing.\nThe request expires in one minute.";
+                    pairingCode.Text = client.Code;
+                    secret = await Task.Run(delegate { return client.Pair(destination, destinationPort, cancellation.Token); });
+                }
+                cancellation.Token.ThrowIfCancellationRequested();
+                Settings next = new Settings { Address = destination, PairingCode = secret, Port = destinationPort,
                     StreamDeckToken = settings == null ? Protocol.NewKey() : settings.StreamDeckToken };
                 next.Validate(false);
                 next.Save(false);
                 settings = next;
                 StartServices();
+                pairingStatus.Text = "Paired with PC 2. You're ready to play.";
                 await CheckConnection();
+            }
+            catch (OperationCanceledException)
+            {
+                TraceLog.Write("INFO", "pairing.canceled", "existing_settings_preserved=true");
+                if (!exiting) pairingStatus.Text = "Pairing canceled. Any previous pairing is unchanged.";
             }
             catch (Exception ex)
             {
-                TraceLog.Failure("settings.save_failed", ex, "role=Button");
-                MessageBox.Show(this, "Check PC 2's IPv4 address, network port, and 64-character pairing code. Settings could not be saved.", Program.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                TraceLog.Failure("pairing.failed", ex, "role=Button");
+                if (!exiting) pairingStatus.Text = ex.Message;
+            }
+            finally
+            {
+                pairingStop = null; cancellation.Dispose();
+                if (!exiting) { pair.Text = "Pair with PC 2"; address.Enabled = true; port.Enabled = true; pairingCode.Text = ""; }
             }
         }
         private async Task CheckConnection()
@@ -290,7 +362,7 @@ namespace PearlPull.Tray
         }
         private void CopyNeoUrl()
         {
-            if (settings == null || string.IsNullOrEmpty(settings.StreamDeckToken)) { MessageBox.Show(this, "Save pairing first.", Program.Title); return; }
+            if (settings == null || string.IsNullOrEmpty(settings.StreamDeckToken)) { MessageBox.Show(this, "Pair with PC 2 first.", Program.Title); return; }
             Clipboard.SetText(settings.NeoUrl);
             MessageBox.Show(this, "Neo URL copied. In Stream Deck, choose System > Website, paste into URL, and enable GET request in background.\n\nKeep this URL private.", Program.Title);
         }
@@ -349,6 +421,7 @@ namespace PearlPull.Tray
         {
             if (!exiting && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); return; }
             exiting = true;
+            if (pairingStop != null) pairingStop.Cancel();
             timer.Stop(); TraceLog.Entry -= OnTrace; StopServices();
             tray.Visible = false;
             base.OnFormClosing(e);

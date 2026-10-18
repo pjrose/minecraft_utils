@@ -18,6 +18,12 @@ internal static class TestHost
             switch (args[0])
             {
                 case "core": Console.WriteLine("Core checks passed: " + CoreChecks.Run()); return 0;
+                case "pairing-core": Console.WriteLine("Pairing checks passed: " + PairingChecks.ProtocolChecks()); return 0;
+                case "pairing-replies": PairingChecks.LostAndForgedReplies(int.Parse(args[1])); return 0;
+                case "pairing-offline": PairingChecks.Offline(int.Parse(args[1])); return 0;
+                case "pairing-live":
+                    TraceLog.Initialize("pairing", args[3]);
+                    PairingChecks.Live(args[1], int.Parse(args[2])); return 0;
                 case "settings": CheckSettings(args[1]); return 0;
                 case "logs": CheckLogs(args[1]); return 0;
                 case "stop": CheckReceiverStop(int.Parse(args[1]), args[2]); return 0;

@@ -14,7 +14,9 @@ under Artifacts. Extract the ZIP, then install:
 | PC 2: trapdoor account | `PearlPull-Receiver-Setup.exe` |
 
 The apps start at Windows sign-in and stay beside the clock when their windows
-are closed. Pair them once using the app windows. No command line is needed.
+are closed. On PC 1, enter PC 2's address and click **Pair with PC 2**. Compare
+the short codes on both screens, then click **Accept pairing** on PC 2. No long
+code to copy or command line is needed. Existing pairings survive upgrades.
 For the Neo, click **Copy Neo button URL** in Button, then use **System → Website**
 with **GET request in background** in Stream Deck.
 

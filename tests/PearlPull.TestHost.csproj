@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../src/PearlPull.Core/PearlPull.cs" Link="PearlPull.cs" />
+    <Compile Include="../src/PearlPull.Core/Pairing.cs" Link="Pairing.cs" />
     <Compile Include="../src/PearlPull.App/Settings.cs" Link="Settings.cs" />
   </ItemGroup>
 </Project>
