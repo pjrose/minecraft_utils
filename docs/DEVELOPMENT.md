@@ -55,6 +55,11 @@ NSIS installation. Pass that `makensis` path to the same script; set `NSISDIR`
 if NSIS was extracted outside its standard location. The Linux build does not
 validate Windows UI, Task Scheduler, firewall elevation, or Minecraft input.
 
+Use backslashes in NSIS `File` and `OutFile` paths. The Windows compiler's file
+matching does not handle the forward slashes accepted by the Linux compiler.
+The build script checks and logs each input file before running NSIS so the CI
+log shows whether a packaging error occurred despite an existing build output.
+
 ## Windows CI
 
 The [Windows workflow](../.github/workflows/windows.yml) runs the network tests,

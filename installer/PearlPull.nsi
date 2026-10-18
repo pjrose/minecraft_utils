@@ -15,7 +15,7 @@ Unicode true
 !define APP "PearlPull${ROLE}.exe"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\MinecraftUtils-PearlPull-${ROLE}"
 Name "${PRODUCT}"
-OutFile "${OUTDIR}/PearlPull-${ROLE}-Setup.exe"
+OutFile "${OUTDIR}\PearlPull-${ROLE}-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\PearlPull\${ROLE}"
 InstallDirRegKey HKCU "${UNINSTALL_KEY}" "InstallLocation"
 RequestExecutionLevel user
@@ -57,11 +57,13 @@ Section "Install"
     ExecWait '"$INSTDIR\${APP}" --quit'
     Sleep 2500
   SetOutPath "$INSTDIR"
-  File "${APPDIR}/${APP}"
-  File "${APPDIR}/${APP}.config"
-  File "${APPDIR}/START-HERE.txt"
+  ; NSIS on Windows requires backslashes for File's directory matching.
+  ; The Linux compiler also accepts these Windows-style path separators.
+  File "${APPDIR}\${APP}"
+  File "${APPDIR}\${APP}.config"
+  File "${APPDIR}\START-HERE.txt"
   SetOutPath "$INSTDIR\icons"
-  File "${APPDIR}/icons/pearl-pull.png"
+  File "${APPDIR}\icons\pearl-pull.png"
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\Pearl Pull"

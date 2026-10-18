@@ -13,6 +13,13 @@ foreach ($role in @('Button', 'Receiver')) {
     New-Item -ItemType Directory -Path (Join-Path $app 'icons') -Force | Out-Null
     Copy-Item (Join-Path $root 'assets/pearl-pull.png') (Join-Path $app 'icons/pearl-pull.png')
     Copy-Item (Join-Path $PSScriptRoot 'START-HERE.txt') $app
+    foreach ($relativePath in @("PearlPull$role.exe", "PearlPull$role.exe.config", 'START-HERE.txt', 'icons/pearl-pull.png')) {
+        $inputPath = Join-Path $app $relativePath
+        if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) { throw "Missing installer input: $inputPath" }
+        $inputFile = Get-Item -LiteralPath $inputPath
+        if ($inputFile.Length -eq 0) { throw "Empty installer input: $inputPath" }
+        Write-Host "Installer input: $($inputFile.FullName) ($($inputFile.Length) bytes)"
+    }
     & $Makensis "$($optionPrefix)WX" "$($optionPrefix)DROLE=$role" "$($optionPrefix)DAPPDIR=$app" "$($optionPrefix)DOUTDIR=$OutputDirectory" (Join-Path $PSScriptRoot 'PearlPull.nsi')
     if ($LASTEXITCODE -ne 0) { throw "The $role installer build failed." }
 }
